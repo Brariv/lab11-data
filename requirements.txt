@@ -1,0 +1,6 @@
+# Dependencias del pipeline (avance Lab 11). Versiones fijadas para reproducir.
+pandas==2.2.2
+numpy==1.26.4
+PyYAML==6.0.2
+# Para el trabajo final (no usadas aun en el avance):
+# mlflow==2.16.2

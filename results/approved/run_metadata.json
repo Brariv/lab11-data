@@ -1,0 +1,54 @@
+{
+  "run_id": "run-20261030T013736Z",
+  "inicio": "2026-10-30T01:37:36.019294+00:00",
+  "commit": "sin-git",
+  "config": "config/config.yaml",
+  "fuente": {
+    "ruta": "data/sample/migracion_mensual_sample.csv",
+    "huella": "ec60d714ed6df774"
+  },
+  "controles": {
+    "ok": 6,
+    "advertencias": 0,
+    "errores": 0
+  },
+  "metricas": {
+    "procedimiento": {
+      "MAE": 10414.486635357753,
+      "RMSE": 12635.39758553569
+    },
+    "ref_ultimo_valor": {
+      "MAE": 65872.5,
+      "RMSE": 69435.7117231472
+    },
+    "ref_promedio_hist": {
+      "MAE": 89432.28490952542,
+      "RMSE": 99583.14300530893
+    }
+  },
+  "periodos": {
+    "ajuste_inicio": "2009-01-01",
+    "ajuste_fin": "2021-03-01",
+    "evaluacion_inicio": "2021-04-01",
+    "evaluacion_fin": "2025-12-01",
+    "meses_ocultos": [
+      "2025-11-01",
+      "2025-12-01"
+    ]
+  },
+  "parametros": {
+    "metodo": "baseline_estacional",
+    "ventana_nivel_meses": 12,
+    "factor_reparto": {
+      "activo": true,
+      "metodo": "perfil_estacional",
+      "descripcion": "Los registros agregados sin mes se distribuyen entre los meses del periodo proporcionalmente al indice estacional del destino. Nunca se reparte sobre periodos sin cobertura (esos quedan como faltantes, no como cero).\n"
+    },
+    "referencias": [
+      "ultimo_valor_observado",
+      "promedio_historico"
+    ]
+  },
+  "aprobado": true,
+  "razones_rechazo": []
+}
