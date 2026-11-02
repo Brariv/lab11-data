@@ -1,0 +1,52 @@
+// Diagrama del flujo final (Lab 11). Regenerar con:
+//   dot -Tpng -Gdpi=160 docs/diagrama_flujo_final.dot -o docs/diagrama_flujo_final.png
+digraph flujo {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=13, nodesep=0.35, ranksep=0.32,
+         label="Flujo reproducible del Observatorio de Inteligencia Turistica (trabajo final)",
+         labelloc=t, fontcolor="#0F4C5C", bgcolor="white"];
+  node  [shape=box, style="rounded,filled", fillcolor="#E8F1F3", color="#0F4C5C",
+         fontname="Helvetica", fontsize=11, fontcolor="#0F4C5C", penwidth=1.6, width=3.6];
+  edge  [color="#5A6470", arrowsize=0.7, fontname="Helvetica"];
+
+  fuente [label="Fuente: Base de Migracion (CSV mensual)\nmontada en solo lectura, fuera de git y de Docker", fillcolor="#DCE3E6", color="#5A6470", fontcolor="#333333"];
+  s1 [label="1. Lectura + huella SHA-256\nde la fuente y de config.yaml"];
+  s2 [label="2. Validacion: 6 controles de calidad"];
+  s3 [label="3. Preparacion: serie mensual\n+ factor de reparto"];
+  s4 [label="4. Estimacion: baseline_estacional\n(solo meses anteriores)"];
+  s5 [label="5. Backtesting origen movil 2021-04 a 2025-12\nMAE / RMSE / MAPE vs. 2 referencias"];
+  s6 [label="6. Estimaciones con esquema del tablero\n(observado | estimacion, horizonte 2 meses)"];
+  s7 [label="7. Almacenamiento: version candidata"];
+  s8 [label="8. Publicacion: results/approved\n+ copia inmutable en results/versions/<run_id>"];
+  tablero [label="Tablero (Streamlit): seccion Estimaciones oficiales\nsolo LEE la version aprobada", fillcolor="#E3F0E5", color="#3C7D4A", fontcolor="#2E5E38"];
+
+  node [shape=diamond, style=filled, fillcolor="#F8E1D7", color="#C8643B", fontcolor="#C8643B", width=1.9, fontsize=10];
+  d1 [label="VALIDACION\nde datos"];
+  d2 [label="EVALUACION\n(regla de\naceptacion)"];
+  d3 [label="AUTORIZACION\nde publicacion"];
+
+  node [shape=box, style="rounded,filled", fillcolor="#F8E1D7", color="#C8643B", fontcolor="#C8643B", width=2.6, fontsize=10];
+  stop1 [label="Control critico fallido:\nDETENER (codigo 2).\nSe conserva la ultima aprobada"];
+  stop2 [label="Regla no cumplida:\nRECHAZAR (codigo 1).\nSe conserva la ultima aprobada"];
+
+  node [shape=cylinder, style=filled, fillcolor="#EFE6F5", color="#7B3FA0", fontcolor="#5A2D78", width=2.6, fontsize=10];
+  mlflow [label="MLflow Tracking\nparametros, metricas, controles,\nartefactos, commit y huellas\n(TODAS las corridas)"];
+  registro [label="registro_corridas.jsonl\n+ logs/<run_id>.jsonl"];
+
+  node [shape=box, style="rounded,filled", fillcolor="#EFE6F5", color="#7B3FA0", fontcolor="#5A2D78", width=2.6, fontsize=10];
+  monitor [label="Monitoreo (scripts/monitor.py)\nactualizacion, calidad, resultados"];
+  restore [label="Restauracion\n(scripts/restore_version.py)"];
+
+  fuente -> s1 -> s2 -> s3 -> s4 -> s5 -> s6 -> s7 -> s8 -> tablero;
+  {rank=same; s2; d1}  {rank=same; s5; d2}  {rank=same; s8; d3}
+  s2 -> d1 [color="#C8643B"];  d1 -> stop1 [color="#C8643B"];
+  s5 -> d2 [color="#C8643B"];  d2 -> stop2 [color="#C8643B"];
+  s8 -> d3 [color="#C8643B", dir=back];
+  {rank=same; s7; mlflow}
+  s7 -> mlflow [style=dashed, color="#7B3FA0"];
+  stop1 -> mlflow [style=dashed, color="#7B3FA0"];
+  stop2 -> mlflow [style=dashed, color="#7B3FA0"];
+  mlflow -> registro [style=dashed, color="#7B3FA0"];
+  registro -> monitor [color="#7B3FA0"];
+  monitor -> restore [label=" alerta", fontsize=9, fontcolor="#7B3FA0", color="#7B3FA0"];
+  restore -> tablero [style=dashed, color="#7B3FA0", label=" version anterior", fontsize=9, fontcolor="#7B3FA0"];
+}

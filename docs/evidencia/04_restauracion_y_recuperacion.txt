@@ -1,0 +1,25 @@
+$ python scripts/restore_version.py --listar
+  run-20261102T060112552648Z
+* run-20261102T060118512274Z
+$ python scripts/restore_version.py --anterior --motivo "prueba de recuperacion"
+Restaurada run-20261102T060112552648Z (reemplaza a run-20261102T060118512274Z) en results/approved
+$ python scripts/restore_version.py --listar
+* run-20261102T060112552648Z
+  run-20261102T060118512274Z
+
+$ python -m src.run_pipeline   # recuperacion: datos corregidos, nueva version aprobada
+[INFO] inicio: run_id=run-20261102T060134547088Z commit=a021409-modificado
+[ADVERTENCIA] lectura: Usando muestra sintetica (no hay datos institucionales en data/institucional/migracion_mensual.csv)
+[INFO] lectura: Leidas 204 filas de data/sample/migracion_mensual_sample.csv (huella ec60d714ed6df774)
+[INFO] validacion: ok=6 adv=0 err=0
+[INFO] preparacion: Factor de reparto activo (perfil_estacional); no hay registros sin mes que repartir
+[INFO] preparacion: Serie mensual preparada: 204 meses
+[INFO] evaluacion: Backtesting 57 meses | MAE procedimiento=44941 | MAE ultimo_valor=49947 | MAE promedio_hist=53666
+[INFO] estimaciones: Horizonte: 2 meses futuros (2026-01-01 a 2026-02-01)
+[INFO] estimaciones: 202 observados, 4 estimaciones
+[INFO] aceptacion: APROBADA
+[INFO] almacenamiento: Version candidata guardada en results/candidate
+[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions\run-20261102T060134547088Z)
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=f80999cc53934c5eb91a31e9f17f9c3e
+[INFO] fin: run_id=run-20261102T060134547088Z estado=aprobado codigo=0
+codigo de salida: 0

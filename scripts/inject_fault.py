@@ -9,9 +9,10 @@ Uso:
     python scripts/inject_fault.py clave_duplicada
     python scripts/inject_fault.py denominador_cero
     python scripts/inject_fault.py origen_diario   # rompe la regla metodologica
+    python scripts/inject_fault.py metrica_degradada  # pasa controles, falla la regla
 
-Luego:
-    python -m src.run_pipeline --config config/config.yaml   (apuntando la fuente a la copia)
+Luego (la copia nunca reemplaza la fuente original):
+    python -m src.run_pipeline --fuente data/sample/migracion_con_falla.csv
 """
 import sys
 import os
@@ -36,13 +37,19 @@ def main():
         df.loc[5, "dias_fuente"] = 0
     elif tipo == "origen_diario":
         df.loc[20, "origen_fuente"] = "diaria_agregada"
+    elif tipo == "metrica_degradada":
+        # Datos validos pero erraticos en el periodo de evaluacion: los
+        # controles pasan y es la regla de aceptacion la que debe rechazar.
+        ev = pd.to_datetime(df["periodo"]) >= "2021-04-01"
+        df.loc[ev, "viajeros"] = (df.loc[ev, "viajeros"]
+                                  * [3.0 if i % 2 else 0.3 for i in range(ev.sum())]).round().astype(int)
     else:
         print(f"Tipo desconocido: {tipo}")
         sys.exit(1)
 
     df.to_csv(OUT, index=False)
     print(f"Falla '{tipo}' inyectada -> {OUT}")
-    print("Apunte fuentes.migracion_mensual.ruta a este archivo y ejecute el pipeline.")
+    print(f"Ejecute: python -m src.run_pipeline --fuente {OUT}")
 
 
 if __name__ == "__main__":

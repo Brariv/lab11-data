@@ -1,0 +1,52 @@
+{
+  "controles": [
+    {
+      "control": "columnas_y_tipos",
+      "estado": "ok",
+      "critico": true,
+      "detalle": "Columnas y tipos correctos",
+      "items": []
+    },
+    {
+      "control": "fechas_y_cobertura",
+      "estado": "ok",
+      "critico": false,
+      "detalle": "Fechas validas y cobertura completa",
+      "items": []
+    },
+    {
+      "control": "unicidad",
+      "estado": "ok",
+      "critico": true,
+      "detalle": "Sin duplicados por clave ['periodo', 'destino']",
+      "items": []
+    },
+    {
+      "control": "valores_faltantes",
+      "estado": "ok",
+      "critico": true,
+      "detalle": "Sin faltantes bloqueantes",
+      "items": []
+    },
+    {
+      "control": "valores_y_denominadores",
+      "estado": "ok",
+      "critico": true,
+      "detalle": "Conteos no negativos, finitos y denominadores validos",
+      "items": []
+    },
+    {
+      "control": "regla_metodologica",
+      "estado": "ok",
+      "critico": true,
+      "detalle": "Toda la serie proviene de la fuente mensual",
+      "items": []
+    }
+  ],
+  "resumen": {
+    "ok": 6,
+    "advertencias": 0,
+    "errores": 0
+  },
+  "detener_pipeline": false
+}

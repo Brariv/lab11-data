@@ -1,0 +1,72 @@
+# Laboratorio 11 - MLOps. Levanta todo el flujo desde una copia limpia:
+#
+#   docker compose up --build            # MLflow + pipeline + tablero
+#   docker compose run --rm pipeline     # nueva corrida (actualizacion)
+#
+# MLflow:  http://localhost:5000      Tablero: http://localhost:8501
+#
+# Persistencia (volumenes con nombre, sobreviven a `docker compose down`):
+#   ots_mlflow      base de datos y artefactos de MLflow
+#   ots_resultados  version aprobada, historial de versiones y registro de corridas
+#   ots_logs        un log JSONL por corrida
+# Solo `docker compose down -v` los borra.
+
+x-pipeline: &pipeline-base
+  build:
+    context: .
+    args:
+      GIT_COMMIT: ${GIT_COMMIT:-sin-git}
+  image: ots-pipeline:1.0.0
+
+services:
+  mlflow:
+    <<: *pipeline-base
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --allowed-hosts mlflow,mlflow:5000,localhost,localhost:5000,127.0.0.1,127.0.0.1:5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ots_mlflow:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  pipeline:
+    <<: *pipeline-base
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      # Datos institucionales: montados en solo lectura, nunca dentro de la imagen
+      - ./data/institucional:/app/data/institucional:ro
+      - ots_resultados:/app/results
+      - ots_logs:/app/logs
+    restart: "no"
+
+  dashboard:
+    build: ./dashboard
+    image: ots-dashboard:1.0.0
+    depends_on:
+      pipeline:
+        condition: service_started
+    environment:
+      OTS_RESULTADOS: /resultados
+    ports:
+      - "8501:8501"
+    volumes:
+      - ots_resultados:/resultados:ro
+    restart: unless-stopped
+
+volumes:
+  ots_mlflow:
+  ots_resultados:
+  ots_logs:

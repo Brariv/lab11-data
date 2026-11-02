@@ -1,0 +1,11 @@
+# Tablero (Lab 10 + seccion "Estimaciones oficiales" del Lab 11).
+# Versiones fijadas para que la imagen Docker sea reproducible.
+# plotly se mantiene por debajo de 7: con 7.x Streamlit deja de entregar el
+# evento de seleccion de las graficas, que es lo que enlaza V3 con V1/V2 y V5 con V6.
+streamlit==1.66.1
+plotly==6.9.0
+altair==6.3.0
+pandas==2.3.3
+numpy==2.3.4
+scikit-learn==1.9.0
+statsmodels==0.15.0

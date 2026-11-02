@@ -1,0 +1,37 @@
+$ python scripts/monitor.py
+{
+  "generado": "2026-11-02T06:01:38.462068+00:00",
+  "estado": "ok",
+  "alertas": [],
+  "advertencias": [
+    "La version vigente se genero con la muestra sintetica, no con datos institucionales"
+  ],
+  "detalle": {
+    "version_vigente": "run-20261102T060134547088Z",
+    "dias_desde_actualizacion": 0.0,
+    "corridas_registradas": 5,
+    "corridas_sin_aprobar_seguidas": 0,
+    "ultima_corrida": {
+      "run_id": "run-20261102T060134547088Z",
+      "estado": "aprobado",
+      "fin": "2026-11-02T06:01:34.754193+00:00",
+      "controles": {
+        "ok": 6,
+        "advertencias": 0,
+        "errores": 0
+      },
+      "razones_rechazo": []
+    },
+    "cambio_relativo_MAE": 0.0,
+    "MAE_vigente": 44941.3354400841
+  }
+}
+codigo de salida: 0
+
+$ tail results/registro_corridas.jsonl
+  run-20261102T060112552648Z  aprobado                        MAE=44941.3354400841
+  run-20261102T060118512274Z  aprobado                        MAE=44941.3354400841
+  run-20261102T060123988358Z  detenido_por_control_critico    MAE=None
+  run-20261102T060129573528Z  rechazado_por_regla             MAE=325430.7045407853
+  run-20261102T060112552648Z  restaurado                      MAE=None
+  run-20261102T060134547088Z  aprobado                        MAE=44941.3354400841

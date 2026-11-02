@@ -1,0 +1,33 @@
+$ python -m src.run_pipeline --config config/config.yaml   # corrida 1
+[INFO] inicio: run_id=run-20261102T060112552648Z commit=a021409-modificado
+[ADVERTENCIA] lectura: Usando muestra sintetica (no hay datos institucionales en data/institucional/migracion_mensual.csv)
+[INFO] lectura: Leidas 204 filas de data/sample/migracion_mensual_sample.csv (huella ec60d714ed6df774)
+[INFO] validacion: ok=6 adv=0 err=0
+[INFO] preparacion: Factor de reparto activo (perfil_estacional); no hay registros sin mes que repartir
+[INFO] preparacion: Serie mensual preparada: 204 meses
+[INFO] evaluacion: Backtesting 57 meses | MAE procedimiento=44941 | MAE ultimo_valor=49947 | MAE promedio_hist=53666
+[INFO] estimaciones: Horizonte: 2 meses futuros (2026-01-01 a 2026-02-01)
+[INFO] estimaciones: 202 observados, 4 estimaciones
+[INFO] aceptacion: APROBADA
+[INFO] almacenamiento: Version candidata guardada en results/candidate
+[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions\run-20261102T060112552648Z)
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=a2bcdf7fb4c346e8ad95875b727e185d
+[INFO] fin: run_id=run-20261102T060112552648Z estado=aprobado codigo=0
+codigo de salida: 0
+
+$ python -m src.run_pipeline --config config/config.yaml   # corrida 2 (equivalente)
+[INFO] inicio: run_id=run-20261102T060118512274Z commit=a021409-modificado
+[ADVERTENCIA] lectura: Usando muestra sintetica (no hay datos institucionales en data/institucional/migracion_mensual.csv)
+[INFO] lectura: Leidas 204 filas de data/sample/migracion_mensual_sample.csv (huella ec60d714ed6df774)
+[INFO] validacion: ok=6 adv=0 err=0
+[INFO] preparacion: Factor de reparto activo (perfil_estacional); no hay registros sin mes que repartir
+[INFO] preparacion: Serie mensual preparada: 204 meses
+[INFO] evaluacion: Backtesting 57 meses | MAE procedimiento=44941 | MAE ultimo_valor=49947 | MAE promedio_hist=53666
+[INFO] estimaciones: Horizonte: 2 meses futuros (2026-01-01 a 2026-02-01)
+[INFO] estimaciones: 202 observados, 4 estimaciones
+[INFO] aceptacion: APROBADA
+[INFO] almacenamiento: Version candidata guardada en results/candidate
+[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions\run-20261102T060118512274Z)
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=49679d991aa44a2db2ef5022220452fc
+[INFO] fin: run_id=run-20261102T060118512274Z estado=aprobado codigo=0
+codigo de salida: 0

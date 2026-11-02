@@ -1,6 +1,8 @@
-# Dependencias del pipeline (avance Lab 11). Versiones fijadas para reproducir.
-pandas==2.2.2
-numpy==1.26.4
-PyYAML==6.0.2
-# Para el trabajo final (no usadas aun en el avance):
-# mlflow==2.16.2
+# Dependencias del pipeline (Lab 11). Versiones fijadas para reproducir.
+# Probado con Python 3.12 (imagen Docker) y 3.11+.
+pandas==2.3.3
+numpy==2.3.4
+PyYAML==6.0.3
+mlflow==3.5.0
+pytest==8.4.2
+SQLAlchemy==2.0.44   # mlflow 3.5 no es compatible con SQLAlchemy 2.1

@@ -8,7 +8,7 @@
 proyecto:
   nombre: "Observatorio de Inteligencia Turistica"
   destino: "flujo_mensual_nacional"      # destino/serie asignada a este grupo
-  version_procedimiento: "0.1.0-avance"  # version del procedimiento de estimacion
+  version_procedimiento: "1.0.0"         # version del procedimiento de estimacion
   semilla: 42                            # semilla para componentes aleatorios
 
 # ---- Fuentes de datos ----
@@ -45,10 +45,13 @@ periodos:
   ajuste_fin: "2021-03-01"
   evaluacion_inicio: "2021-04-01"  # backtesting / validacion temporal
   evaluacion_fin: "2025-12-01"
-  # Meses ocultados para la validacion temporal del avance (se estiman como si
-  # no estuvieran disponibles). No se usan enero/febrero 2026 por falta de
-  # observaciones comparables (clasificacion de la base cambio en 2023).
+  # Meses ocultados en la salida del tablero: se publican como "estimacion"
+  # para contrastarlos con el observado (validacion visible para el directivo).
   meses_ocultos: ["2025-11-01", "2025-12-01"]
+  # Meses futuros sin observado que se publican como estimacion. Enero y
+  # febrero 2026 no tienen observados comparables (la clasificacion de la base
+  # cambio en 2023), por lo que NO se calculan errores sobre ellos.
+  horizonte_meses: 2
 
 # ---- Parametros y supuestos del procedimiento de estimacion ----
 procedimiento:
@@ -73,7 +76,11 @@ aceptacion:
   # Escala de la variable: decenas/cientos de miles de personas por mes.
   mae_maximo: 120000             # MAE maximo tolerado (personas/mes)
   rmse_maximo: 160000
-  debe_igualar_o_superar_referencia: false   # no es obligatorio superar la referencia
+  # Backtesting con origen movil sobre TODO el periodo de evaluacion
+  # (evaluacion_inicio..evaluacion_fin): cada mes se estima solo con meses
+  # anteriores. Las metricas de la regla salen de ese backtesting.
+  meses_minimos_backtest: 24      # menos meses evaluables => no se puede aprobar
+  debe_igualar_o_superar_referencia: true    # MAE <= mejor referencia simple
   requiere_controles_criticos_ok: true       # ningun control critico puede fallar
   requiere_salidas_completas: true           # sin huecos no justificados en la salida
 
@@ -94,3 +101,23 @@ salida:
   archivo_estimaciones: "estimaciones.csv"
   archivo_metadatos: "run_metadata.json"
   reporte_calidad: "reporte_calidad.json"
+  archivo_backtest: "backtest.csv"
+  carpeta_versiones: "results/versions"   # historial de versiones aprobadas
+  registro_corridas: "results/registro_corridas.jsonl"  # una linea por corrida
+  carpeta_logs: "logs"
+
+# ---- MLflow Tracking ----
+# La URI puede sobreescribirse con la variable de entorno MLFLOW_TRACKING_URI
+# (en Docker Compose apunta al servidor MLflow con persistencia).
+mlflow:
+  activo: true
+  tracking_uri: "sqlite:///mlruns/mlflow.db"
+  artifact_location: "mlruns/artifacts"
+  experimento: "observatorio_flujo_mensual_nacional"
+
+# ---- Monitoreo ----
+monitoreo:
+  dias_max_sin_actualizar: 45     # version aprobada mas vieja => alerta de actualizacion
+  max_corridas_fallidas_seguidas: 2
+  degradacion_mae_relativa: 0.25  # MAE nuevo > 25% peor que la aprobada previa => alerta
+  reporte: "results/monitoreo.json"

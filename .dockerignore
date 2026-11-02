@@ -1,0 +1,18 @@
+# Nada de datos institucionales, historia de git ni salidas locales en la imagen
+.git
+.gitignore
+data/institucional/*
+!data/institucional/README.md
+data/sample/migracion_con_falla.csv
+mlruns/
+logs/
+results/candidate/
+results/versions/
+results/registro_corridas.jsonl
+results/monitoreo.json
+dashboard/
+docs/
+**/__pycache__/
+**/*.pyc
+.venv/
+.pytest_cache/

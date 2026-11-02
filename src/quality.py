@@ -148,15 +148,18 @@ def control_valores_y_denominadores(df, cfg):
     """Detecta conteos negativos, valores no finitos y denominadores = 0.
     DETIENE en cualquiera de esos casos."""
     problemas = []
-    v = pd.to_numeric(df.get("viajeros"), errors="coerce")
-    if v is not None:
+    if "viajeros" not in df.columns:
+        problemas.append("no se puede verificar: falta la columna 'viajeros'")
+    else:
+        v = pd.to_numeric(df["viajeros"], errors="coerce").astype("float64")
         if (v < 0).any():
             problemas.append(f"viajeros negativos: {int((v < 0).sum())}")
-        if (~np.isfinite(v.to_numpy(dtype="float64", na_value=np.nan))).any():
+        if (~np.isfinite(v.to_numpy())).any():
             problemas.append("viajeros con valores no finitos (inf/NaN)")
-    d = pd.to_numeric(df.get("dias_fuente"), errors="coerce")
-    if d is not None and (d == 0).any():
-        problemas.append(f"denominador dias_fuente = 0: {int((d == 0).sum())}")
+    if "dias_fuente" in df.columns:
+        d = pd.to_numeric(df["dias_fuente"], errors="coerce")
+        if (d == 0).any():
+            problemas.append(f"denominador dias_fuente = 0: {int((d == 0).sum())}")
 
     if problemas:
         return _res("valores_y_denominadores", ERROR, True,

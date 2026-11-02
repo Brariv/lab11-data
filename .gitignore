@@ -1,8 +1,23 @@
+# ---- Laboratorio 11 ----
+# Datos institucionales: NUNCA se versionan (se montan por ruta configurable)
+data/institucional/*
+!data/institucional/.gitkeep
+!data/institucional/README.md
+data/sample/migracion_con_falla.csv
+# Salidas de cada corrida (en Docker viven en volumenes persistentes)
+logs/
+mlruns/
+mlflow.db
+results/candidate/
+results/versions/
+results/registro_corridas.jsonl
+results/monitoreo.json
+results/approved/*.tmp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
-__init__.py
 
 # C extensions
 *.so
