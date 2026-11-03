@@ -84,3 +84,20 @@ def test_regla_metodologica_detiene():
     df.loc[0, "origen_fuente"] = "diaria_agregada"
     r = quality.control_regla_metodologica(df, CFG)
     assert r["estado"] == quality.ERROR
+
+
+def test_na_en_columna_entera_no_es_error_de_tipo():
+    # dias_fuente admite NA: lo trata el control 4 como advertencia, no el 1
+    df = _df_valido().astype({"dias_fuente": "float"})
+    df.loc[1, "dias_fuente"] = None
+    rep, critico = quality.ejecutar_controles(df, CFG)
+    estados = {r["control"]: r["estado"] for r in rep["controles"]}
+    assert estados["columnas_y_tipos"] == quality.OK
+    assert estados["valores_faltantes"] == quality.ADVERTENCIA
+    assert not critico
+
+
+def test_texto_en_columna_entera_si_es_error_de_tipo():
+    df = _df_valido().astype({"viajeros": "object"})
+    df.loc[1, "viajeros"] = "mucho"
+    assert quality.control_columnas_y_tipos(df, CFG)["estado"] == quality.ERROR

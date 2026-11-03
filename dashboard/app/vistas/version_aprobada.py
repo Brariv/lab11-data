@@ -244,7 +244,8 @@ def _v22(bt, meta, completo) -> None:
 
         m = meta.get("metricas") or {}
         filas = [{"Procedimiento": NOMBRE_PROC[k], "MAE": round(v["MAE"]),
-                  "RMSE": round(v["RMSE"]), "MAPE (%)": round(v.get("MAPE", float("nan")), 1),
+                  "RMSE": round(v["RMSE"]), "MAPE (%)": (round(v["MAPE"], 1) if v.get("MAPE") is not None
+                               else float("nan")),
                   "Meses": v.get("n_meses")} for k, v in m.items() if k in NOMBRE_PROC]
         if filas:
             st.dataframe(pd.DataFrame(filas), hide_index=True, width="stretch")
@@ -311,9 +312,24 @@ def _v23(meta, calidad, monitoreo, restauracion, completo) -> None:
                     f'{"Sin alertas" if ok else "Con alertas"}</span> · revisado '
                     f'{monitoreo.get("generado", "")[:16].replace("T", " ")} UTC',
                     unsafe_allow_html=True)
+                for clave, nombre in (("actualizacion", "Actualizacion"),
+                                      ("calidad", "Calidad de los datos"),
+                                      ("resultados", "Resultados")):
+                    r = (monitoreo.get("verificaciones") or {}).get(clave)
+                    if r:
+                        bien = r.get("estado") == "ok"
+                        st.markdown(
+                            f'<div style="display:flex;justify-content:space-between;'
+                            f'padding:4px 0;border-bottom:1px solid #DFE3F2">'
+                            f'<span>{nombre}</span><span style="color:'
+                            f'{VERDE if bien else ROSA};font-weight:600">'
+                            f'{"Correcto" if bien else "Revisar"}</span></div>',
+                            unsafe_allow_html=True)
                 if "dias_desde_actualizacion" in det:
                     st.markdown(f"- Dias desde la ultima actualizacion: "
-                                f"**{det['dias_desde_actualizacion']:.0f}**")
+                                f"**{det['dias_desde_actualizacion']:.0f}**"
+                                + (f" · datos hasta **{det['ultimo_periodo_observado_publicado']}**"
+                                   if det.get("ultimo_periodo_observado_publicado") else ""))
                 st.markdown(f"- Corridas registradas: **{det.get('corridas_registradas', 0)}**"
                             f" · sin aprobar seguidas: **{det.get('corridas_sin_aprobar_seguidas', 0)}**")
                 for a in monitoreo.get("alertas", []):

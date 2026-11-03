@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -32,6 +33,11 @@ M, MO = META["metricas"], META["metricas_meses_ocultos"]
 
 def miles(x):
     return f"{x:,.0f}"
+
+
+def pct(x):
+    """MAPE: None cuando todos los observados evaluados son cero."""
+    return "n/d" if x is None else f"{x:.1f} %"
 
 
 # --------------------------------------------------------------------------
@@ -182,10 +188,10 @@ def contenido(doc):
         ["1. Lectura", "Carga la fuente y calcula la huella SHA-256 de la fuente y de la configuracion"],
         ["2. Validacion", "Seis controles; si uno critico falla se detiene (codigo 2)"],
         ["3. Preparacion", "Serie mensual y factor de reparto (supuesto documentado)"],
-        ["4. Estimacion", "baseline_estacional: nivel de 12 meses por indice estacional, solo con meses anteriores"],
+        ["4. Ajuste / estimacion", "baseline_estacional: nivel de 12 meses por indice estacional, solo con meses anteriores; formula y parametros en parametros_ajustados.json"],
         ["5. Evaluacion", "Backtesting 2021-04 a 2025-12 y regla de aceptacion"],
         ["6. Estimaciones", "Tabla con el esquema del tablero: observados, meses ocultos y 2 meses futuros"],
-        ["7. Almacenamiento", "Version candidata con reporte de calidad, backtest y metadatos"],
+        ["7. Almacenamiento", "Version candidata con reporte de calidad, backtest, parametros ajustados y metadatos"],
         ["8. Publicacion", "Solo si la regla autoriza; copia inmutable en results/versions/<run_id>"],
     ], anchos=[1.6, 4.6])
     p(doc, "Medidas de reproducibilidad: dependencias con version fijada (requirements.txt y "
@@ -195,6 +201,13 @@ def contenido(doc):
            "regla, 2 detenida por control critico, 3 error). Dos corridas equivalentes "
            "producen la misma huella de fuente, la misma huella de configuracion y las "
            "mismas metricas (seccion 9).")
+    p(doc, "Formula del procedimiento, conservada junto con sus parametros en cada version: "
+           "estimacion(t) = max(0, nivel x indice_estacional[mes(t)]), donde el nivel es el "
+           "promedio desestacionalizado de los ultimos 12 meses anteriores a t y "
+           "indice_estacional[m] es el promedio del mes m dividido entre el promedio global, "
+           "ambos con meses anteriores a t. Cada corrida deja ademas logs/<run_id>.jsonl, "
+           "cuya ultima linea resume hora de inicio y fin, etapas completadas, advertencias, "
+           "errores y resultado de la publicacion.")
 
     h1(doc, "4. Controles automaticos de calidad")
     tabla(doc, ["#", "Control", "Advertencia", "Detiene"], [
@@ -206,21 +219,26 @@ def contenido(doc):
         ["6", "Regla metodologica", "-", "Algun mes proviene de 'diaria_agregada'"],
     ], anchos=[0.3, 1.6, 2.1, 2.2])
     p(doc, "Respecto del avance se corrigio el control 5: ante una columna ausente fallaba "
-           "por una excepcion interna; ahora reporta el problema de forma explicita. Los "
-           "periodos sin cobertura nunca se convierten en cero.")
+           "por una excepcion interna; ahora reporta el problema de forma explicita. Tambien "
+           "se corrigio el control 1: trataba un NA en una columna entera como tipo "
+           "incompatible y detenia el flujo, de modo que la ausencia permitida en dias_fuente "
+           "nunca llegaba al control 4; ahora el control 1 solo revisa los valores presentes. "
+           "Los periodos sin cobertura nunca se convierten en cero.")
 
     h1(doc, "5. Evaluacion y regla de aceptacion")
     p(doc, f"El procedimiento se evalua con origen movil sobre {proc['n_meses']} meses "
            "(2021-04 a 2025-12): cada mes se estima solo con los meses anteriores, como se "
            "haria en produccion. Se compara contra el ultimo valor observado y el promedio "
-           "historico sobre los mismos meses.")
+           "historico sobre los mismos meses. El MAPE excluye los meses con observado igual a "
+           "cero, porque ahi el error relativo no esta definido, e informa cuantos meses "
+           "entraron en su calculo; en esta serie ningun mes evaluado tiene observado cero.")
     tabla(doc, ["Procedimiento", "MAE", "RMSE", "MAPE", "Meses"], [
         ["baseline_estacional (oficial)", miles(proc["MAE"]), miles(proc["RMSE"]),
-         f"{proc['MAPE']:.1f} %", proc["n_meses"]],
+         pct(proc['MAPE']), proc["n_meses"]],
         ["Referencia: ultimo valor", miles(ult["MAE"]), miles(ult["RMSE"]),
-         f"{ult['MAPE']:.1f} %", ult["n_meses"]],
+         pct(ult['MAPE']), ult["n_meses"]],
         ["Referencia: promedio historico", miles(prom["MAE"]), miles(prom["RMSE"]),
-         f"{prom['MAPE']:.1f} %", prom["n_meses"]],
+         pct(prom['MAPE']), prom["n_meses"]],
     ], anchos=[2.4, 1.0, 1.0, 0.9, 0.8])
     p(doc, f"El procedimiento oficial se equivoca {mejora:.0f} % menos que la mejor "
            "referencia. Sobre los dos meses ocultos que ve el tablero (2025-11 y 2025-12) el "
@@ -251,9 +269,9 @@ def contenido(doc):
         ["Codigo", "Commit de Git (tag mlflow.source.git.commit) y version del procedimiento"],
         ["Fuentes", "Ruta, huella SHA-256 y si es la muestra sintetica"],
         ["Parametros", "Metodo, ventana, factor de reparto, periodos, umbrales y semilla"],
-        ["Metricas", "MAE, RMSE y MAPE del backtesting y de los meses ocultos (oficial y referencias), conteo de controles, aprobado, codigo de salida"],
+        ["Metricas", "MAE, RMSE y MAPE del backtesting y de los meses ocultos (oficial y referencias), conteo de controles, perfil de calidad (faltantes, duplicados, cobertura), aprobado, codigo de salida"],
         ["Controles", "Resumen como metricas y reporte completo como artefacto"],
-        ["Artefactos", "config.yaml, reporte_calidad.json, estimaciones.csv, backtest.csv, run_metadata.json y log de la corrida"],
+        ["Artefactos", "config.yaml, reporte_calidad.json, estimaciones.csv, backtest.csv, parametros_ajustados.json (formula y parametros para reproducir), run_metadata.json y log de la corrida"],
     ], anchos=[1.3, 4.9])
     p(doc, "En local el registro usa sqlite (mlruns/mlflow.db). En Docker Compose el pipeline "
            "apunta al servicio mlflow (MLFLOW_TRACKING_URI=http://mlflow:5000), que guarda "
@@ -278,11 +296,22 @@ def contenido(doc):
     ])
 
     h1(doc, "8. Monitoreo y recuperacion")
-    tabla(doc, ["Dimension", "Alerta cuando"], [
-        ["Actualizacion", "La version aprobada tiene mas de 45 dias o no existe"],
-        ["Calidad", "Hay 2 o mas corridas seguidas sin aprobar (controles o regla)"],
-        ["Resultados", "El MAE empeora mas de 25 % respecto de la aprobada anterior"],
+    tabla(doc, ["Verificacion", "Alerta cuando"], [
+        ["Actualizacion", "La fuente de la ultima corrida o los observados publicados no llegan al "
+                          "ultimo periodo esperado (fin_serie, 2025-12); la version no estima los "
+                          "meses del horizonte; no hay version aprobada; o tiene mas de 45 dias"],
+        ["Calidad", "Aumentan los faltantes, duplicados, periodos sin informacion o meses con "
+                    "cobertura parcial respecto de la corrida anterior; o hay 2 o mas corridas "
+                    "seguidas sin aprobar"],
+        ["Resultados", "Hay estimaciones negativas o no finitas; una estimacion varia mas de "
+                       "80 % respecto del mes anterior; o el MAE empeora mas de 25 % frente a la "
+                       "aprobada anterior (solo entre versiones con observados comparables)"],
     ], anchos=[1.5, 4.7])
+    p(doc, "Una alerta pide revision: no cambia la version publicada y una variacion alta no "
+           "demuestra por si sola perdida de precision. El umbral de 80 % se justifica con la "
+           "serie: el 95 % de los cambios mes a mes es menor a 28 % y solo los meses de la "
+           "pandemia (2020-04 a 2020-07) lo superan. El perfil de calidad que se compara "
+           "(conteos de faltantes, duplicados y cobertura) se guarda en cada corrida.")
     p(doc, "scripts/monitor.py escribe results/monitoreo.json (lo muestra el tablero) y sale "
            "con codigo 1 si hay alerta, para poder usarse en un cron o en CI. Cada version "
            "aprobada se guarda de forma inmutable en results/versions/<run_id>/; "
@@ -306,10 +335,15 @@ def contenido(doc):
         "rechaza (MAE y RMSE sobre el umbral), codigo 1, sin publicar.",
         "Restauracion de la version anterior y, al corregir los datos, recuperacion con una "
         "nueva version aprobada. El monitoreo termina sin alertas.",
+        "Monitoreo con alertas: una fuente que solo llega a 2025-08 dispara la verificacion de "
+        "actualizacion; NA nuevos en dias_fuente (ausencia permitida, la corrida se aprueba) "
+        "disparan la de calidad; y una estimacion negativa o con un salto mayor a 80 % "
+        "dispara la de resultados (docs/evidencia/05_monitoreo.txt).",
         "Docker Compose: el mismo flujo se verifico en contenedores, y los volumenes de "
         "MLflow y de versiones persistieron tras docker compose down / up.",
-        "19 pruebas automaticas (pytest) cubren controles, publicacion, equivalencia, "
-        "detencion, rechazo, restauracion y monitoreo.",
+        "27 pruebas automaticas (pytest) cubren controles, publicacion, equivalencia, "
+        "detencion, rechazo, restauracion, log por corrida, parametros reproducibles, MAPE "
+        "con ceros y las tres verificaciones de monitoreo.",
     ])
 
     h1(doc, "10. Contenerizacion")
@@ -350,9 +384,15 @@ def contenido(doc):
 
 
 def a_pdf(docx):
-    """Exporta a PDF con Microsoft Word (Windows). Si no hay Word, lo omite."""
+    """Exporta a PDF con Microsoft Word (Windows) o, si no, con LibreOffice."""
     if sys.platform != "win32":
-        print("PDF omitido: requiere Microsoft Word en Windows")
+        soffice = shutil.which("soffice") or shutil.which("libreoffice")
+        if not soffice:
+            print("PDF omitido: requiere Microsoft Word (Windows) o LibreOffice")
+            return
+        subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir",
+                        os.path.dirname(os.path.abspath(docx)), docx], check=True, timeout=180)
+        print("PDF:", docx[:-5] + ".pdf")
         return
     entrada, salida = os.path.abspath(docx), os.path.abspath(docx[:-5] + ".pdf")
     ps = (f"$w = New-Object -ComObject Word.Application; $w.Visible = $false; "

@@ -84,6 +84,9 @@ def registrar_corrida(cfg, config_path, metadatos, reg):
                 "fuente.es_muestra_sintetica": str(
                     (metadatos.get("fuente") or {}).get("es_muestra_sintetica")),
                 "razones_rechazo": "; ".join(metadatos.get("razones_rechazo") or []),
+                "etapas_completadas": ",".join(metadatos.get("etapas_completadas") or []),
+                "periodo.ultimo_fuente": str((metadatos.get("perfil_calidad") or {})
+                                             .get("ultimo_periodo")),
             })
             params = {"semilla": cfg["proyecto"]["semilla"],
                       "destino": cfg["proyecto"]["destino"]}
@@ -102,6 +105,9 @@ def registrar_corrida(cfg, config_path, metadatos, reg):
                     metricas[f"ocultos.{nombre_proc}.{k}"] = v
             for k, v in (metadatos.get("controles") or {}).items():
                 metricas[f"controles.{k}"] = v
+            for k, v in (metadatos.get("perfil_calidad") or {}).items():
+                if isinstance(v, (int, float)):
+                    metricas[f"calidad.{k}"] = v
             metricas["aprobado"] = 1.0 if metadatos.get("aprobado") else 0.0
             metricas["codigo_salida"] = metadatos.get("codigo_salida", -1)
             mlflow.log_metrics({k: float(v) for k, v in metricas.items() if v is not None})

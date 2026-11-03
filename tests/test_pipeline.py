@@ -133,3 +133,86 @@ def test_monitoreo_alerta_sin_version_y_ok_tras_publicar(cfg_tmp):
     for _ in range(cfg["monitoreo"]["max_corridas_fallidas_seguidas"]):
         run_pipeline.ejecutar(ruta, fuente=_danar(tmp_path, lambda d: d.drop(columns=["viajeros"])))
     assert monitor.evaluar(cfg)["estado"] == "alerta"
+
+
+def test_log_por_corrida_resume_etapas_y_publicacion(cfg_tmp):
+    ruta, cfg, tmp_path = cfg_tmp
+    _, meta = run_pipeline.ejecutar(ruta, usar_muestra=True)
+    log = [json.loads(x) for x in open(os.path.join(cfg["salida"]["carpeta_logs"],
+                                                    f"{meta['run_id']}.jsonl"), encoding="utf-8")]
+    res = log[-1]
+    assert res["etapa"] == "resumen"
+    assert res["inicio"] and res["fin"] and res["publicacion"] == "publicada"
+    assert res["etapas_completadas"][-1] == "publicacion"
+    assert "advertencias" in res and res["errores"] == []
+
+    _, meta2 = run_pipeline.ejecutar(ruta, fuente=_danar(tmp_path, lambda d: d.drop(columns=["viajeros"])))
+    log2 = [json.loads(x) for x in open(os.path.join(cfg["salida"]["carpeta_logs"],
+                                                     f"{meta2['run_id']}.jsonl"), encoding="utf-8")]
+    assert log2[-1]["etapas_completadas"] == ["lectura", "validacion"]
+    assert log2[-1]["errores"] and log2[-1]["publicacion"].startswith("no publicada")
+
+
+def test_parametros_ajustados_reproducen_la_estimacion(cfg_tmp):
+    ruta, cfg, _ = cfg_tmp
+    run_pipeline.ejecutar(ruta, usar_muestra=True)
+    apr = cfg["salida"]["carpeta_aprobada"]
+    par = json.load(open(os.path.join(apr, cfg["salida"]["archivo_parametros"]), encoding="utf-8"))
+    assert par["formula"]
+    ph = par["parametros_horizonte"]
+    assert len(ph["indice_estacional"]) == 12
+    est = pd.read_csv(os.path.join(apr, "estimaciones.csv"))
+    fut = est[est["valor_observado"].isna()].iloc[0]
+    mes = pd.Timestamp(fut["periodo_estimado"]).month
+    assert round(ph["nivel"] * ph["indice_estacional"][str(mes)]) == fut["valor"]
+
+
+def test_mape_excluye_meses_con_observado_cero():
+    ev = pd.DataFrame({"observado": [0.0, 100.0], "procedimiento": [10.0, 110.0],
+                       "ref_ultimo_valor": [0.0, 90.0], "ref_promedio_hist": [5.0, 100.0]})
+    m = run_pipeline._metricas(ev)["procedimiento"]
+    assert m["MAE"] == 10.0 and m["n_meses"] == 2
+    assert m["MAPE"] == 10.0 and m["n_meses_mape"] == 1
+    solo_ceros = run_pipeline._metricas(ev.iloc[[0]])["procedimiento"]
+    assert solo_ceros["MAPE"] is None
+
+
+def test_monitoreo_actualizacion_detecta_fuente_desactualizada(cfg_tmp):
+    ruta, cfg, tmp_path = cfg_tmp
+    vieja = _danar(tmp_path, lambda d: d[pd.to_datetime(d["periodo"]) < "2025-09-01"])
+    run_pipeline.ejecutar(ruta, fuente=vieja)
+    rep = monitor.evaluar(cfg)
+    act = rep["verificaciones"]["actualizacion"]
+    assert act["estado"] == "alerta"
+    assert act["detalle"]["ultimo_periodo_fuente"] == "2025-08"
+
+
+def test_monitoreo_calidad_detecta_aumento_de_faltantes(cfg_tmp):
+    ruta, cfg, tmp_path = cfg_tmp
+    run_pipeline.ejecutar(ruta, usar_muestra=True)
+    assert monitor.evaluar(cfg)["verificaciones"]["calidad"]["estado"] == "ok"
+    # NA en dias_fuente es una ausencia permitida: la corrida sigue y se aprueba,
+    # pero el monitoreo debe avisar que aumentaron los faltantes.
+    con_na = _danar(tmp_path, lambda d: d.assign(
+        dias_fuente=d["dias_fuente"].astype("float").where(d.index > 3)))
+    codigo, _ = run_pipeline.ejecutar(ruta, fuente=con_na)
+    assert codigo == run_pipeline.SALIDA_OK
+    cal = monitor.evaluar(cfg)["verificaciones"]["calidad"]
+    assert cal["estado"] == "alerta"
+    assert cal["detalle"]["cambios_vs_anterior"]["faltantes"] == 4
+
+
+def test_monitoreo_resultados_detecta_negativos_y_variacion(cfg_tmp):
+    ruta, cfg, _ = cfg_tmp
+    run_pipeline.ejecutar(ruta, usar_muestra=True)
+    assert monitor.evaluar(cfg)["verificaciones"]["resultados"]["estado"] == "ok"
+    ruta_est = os.path.join(cfg["salida"]["carpeta_aprobada"], "estimaciones.csv")
+    est = pd.read_csv(ruta_est)
+    fut = est.index[est["valor_observado"].isna()]
+    est.loc[fut[0], "valor"] = est.loc[fut[0] - 1, "valor"] * 3   # salto de +200 %
+    est.loc[fut[1], "valor"] = -5
+    est.to_csv(ruta_est, index=False)
+    res = monitor.evaluar(cfg)["verificaciones"]["resultados"]
+    assert res["estado"] == "alerta"
+    assert any("negativas" in a for a in res["alertas"])
+    assert any("varia" in a for a in res["alertas"])

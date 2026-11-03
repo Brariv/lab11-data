@@ -53,8 +53,11 @@ def control_columnas_y_tipos(df, cfg):
             if tipo == "date":
                 pd.to_datetime(serie, errors="raise")
             elif tipo == "int":
+                # Los NA no son un problema de tipo: los clasifica el control 4
+                # (ausencia permitida o faltante que impide estimar).
                 conv = pd.to_numeric(serie, errors="coerce")
-                if conv.isna().any() or (conv.dropna() % 1 != 0).any():
+                no_convertibles = conv.isna() & serie.notna()
+                if no_convertibles.any() or (conv.dropna() % 1 != 0).any():
                     problemas.append(f"{col}: no es entero compatible")
             elif tipo == "string":
                 if serie.dropna().map(lambda x: isinstance(x, (int, float))).all() and len(serie.dropna()):
@@ -198,6 +201,39 @@ CONTROLES = [
 ]
 
 
+def perfil_calidad(df, cfg):
+    """Conteos simples de faltantes, duplicados y cobertura de una fuente.
+
+    No decide nada: se guarda en cada corrida para que el monitoreo compare
+    una corrida con la anterior y detecte cambios relevantes. Tolera columnas
+    ausentes (en ese caso el conteo correspondiente queda en None)."""
+    fuente = cfg["fuentes"]["migracion_mensual"]
+    requeridas = [c for c in fuente["columnas_requeridas"] if c in df.columns]
+    clave = [c for c in fuente["clave_unicidad"] if c in df.columns]
+    p = cfg["periodos"]
+    out = {
+        "filas": int(len(df)),
+        "faltantes": int(df[requeridas].isna().sum().sum()) if requeridas else None,
+        "duplicados": (int(df.duplicated(subset=clave, keep=False).sum())
+                       if len(clave) == len(fuente["clave_unicidad"]) else None),
+        "periodos_sin_informacion": None,
+        "meses_cobertura_parcial": None,
+        "ultimo_periodo": None,
+    }
+    if "periodo" in df.columns:
+        per = pd.to_datetime(df["periodo"], errors="coerce")
+        esperados = pd.period_range(p["inicio_serie"], p["fin_serie"], freq="M")
+        presentes = set(per.dropna().dt.to_period("M"))
+        out["periodos_sin_informacion"] = int(sum(x not in presentes for x in esperados))
+        if per.notna().any():
+            out["ultimo_periodo"] = per.max().date().isoformat()
+    if "dias_fuente" in df.columns:
+        d = pd.to_numeric(df["dias_fuente"], errors="coerce")
+        out["meses_cobertura_parcial"] = int(
+            (d < cfg["controles"]["cobertura"]["dias_minimos_mes"]).sum())
+    return out
+
+
 def ejecutar_controles(df, cfg):
     """Ejecuta los seis controles y devuelve (reporte, hay_error_critico)."""
     resultados = []
@@ -216,5 +252,6 @@ def ejecutar_controles(df, cfg):
             "errores": sum(r["estado"] == ERROR for r in resultados),
         },
         "detener_pipeline": hay_critico,
+        "perfil": perfil_calidad(df, cfg),
     }
     return reporte, hay_critico

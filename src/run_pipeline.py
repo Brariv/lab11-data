@@ -63,8 +63,12 @@ def git_commit():
         sha = subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
             stderr=subprocess.DEVNULL).decode().strip()
+        # "-modificado" solo si cambio algo que afecta el resultado (codigo,
+        # configuracion o dependencias), no las salidas que el propio flujo
+        # reescribe (results/approved, docs/evidencia).
         sucio = subprocess.check_output(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
+            ["git", "status", "--porcelain", "--untracked-files=no", "--",
+             "src", "scripts", "config", "requirements.txt", "Dockerfile"],
             stderr=subprocess.DEVNULL).decode().strip()
         return sha + ("-modificado" if sucio else "")
     except Exception:
@@ -172,16 +176,54 @@ PROCEDIMIENTOS = ["procedimiento", "ref_ultimo_valor", "ref_promedio_hist"]
 
 
 def _metricas(ev):
+    """MAE y RMSE sobre todos los meses evaluados. El MAPE excluye los meses con
+    observado igual a cero (el error relativo no esta definido): se informa
+    cuantos meses entraron en el MAPE y queda en None si no entro ninguno."""
     metr = {}
     for col in PROCEDIMIENTOS:
         err = (ev[col] - ev["observado"]).dropna()
         if not len(err):
             continue
+        obs = ev.loc[err.index, "observado"]
+        con_base = obs != 0
+        mape = (float((err[con_base].abs() / obs[con_base]).mean() * 100)
+                if con_base.any() else None)
         metr[col] = {"MAE": float(err.abs().mean()),
                      "RMSE": float(np.sqrt((err ** 2).mean())),
-                     "MAPE": float((err.abs() / ev.loc[err.index, "observado"]).mean() * 100),
-                     "n_meses": int(len(err))}
+                     "MAPE": mape,
+                     "n_meses": int(len(err)),
+                     "n_meses_mape": int(con_base.sum())}
     return metr
+
+
+def parametros_ajustados(serie_disp, periodo_obj, cfg):
+    """Parametros que usa estimar_mes() para un mes objetivo, junto con la
+    formula, para poder reproducir la estimacion sin volver a correr el codigo:
+
+        estimacion(t) = max(0, nivel * indice_estacional[mes(t)])
+        nivel = promedio_{k en ultimos v meses} viajeros(k) / indice_estacional[mes(k)]
+        indice_estacional[m] = promedio(viajeros en el mes m) / promedio(viajeros)
+
+    Todo se calcula solo con meses anteriores a t."""
+    v = cfg["procedimiento"]["ventana_nivel_meses"]
+    train = serie_disp[serie_disp["periodo"] < periodo_obj]
+    if len(train) < 12:
+        return None
+    idx = _indice_estacional(train)
+    ultimos = train.tail(v)
+    nivel = float(np.mean([r.viajeros / idx.get(r.periodo.month, 1.0)
+                           for r in ultimos.itertuples()]))
+    return {"origen_datos_hasta": train["periodo"].max().date().isoformat(),
+            "meses_usados": int(len(train)),
+            "ventana_nivel_meses": v,
+            "nivel": nivel,
+            "indice_estacional": {int(k): float(x) for k, x in sorted(idx.items())}}
+
+
+FORMULA = ("estimacion(t) = max(0, nivel * indice_estacional[mes(t)]); "
+           "nivel = media de viajeros(k)/indice_estacional[mes(k)] en los ultimos "
+           "ventana_nivel_meses meses antes de t; indice_estacional[m] = media de "
+           "viajeros del mes m / media global, con meses anteriores a t")
 
 
 def backtest(serie, meses, cfg, reg=None):
@@ -308,13 +350,14 @@ def regla_aceptacion(metr, hay_critico, estimaciones, cfg, reg):
     return ok, razones
 
 
-def etapa_almacenamiento(estimaciones, ev, metadatos, cfg, reg):
+def etapa_almacenamiento(estimaciones, ev, parametros, metadatos, cfg, reg):
     """Guarda la version candidata (siempre) para inspeccion."""
     sal = cfg["salida"]
     cand = sal["carpeta_candidata"]
     os.makedirs(cand, exist_ok=True)
     _escribir_csv(estimaciones, os.path.join(cand, sal["archivo_estimaciones"]))
     _escribir_csv(ev, os.path.join(cand, sal["archivo_backtest"]))
+    _escribir_json(os.path.join(cand, sal["archivo_parametros"]), parametros)
     _escribir_json(os.path.join(cand, sal["archivo_metadatos"]), metadatos)
     log(reg, "almacenamiento", f"Version candidata guardada en {cand}")
 
@@ -326,7 +369,7 @@ def etapa_publicacion(cfg, aprobado, run_id, reg):
     sal = cfg["salida"]
     cand, apr = sal["carpeta_candidata"], sal["carpeta_aprobada"]
     archivos = [sal["archivo_estimaciones"], sal["archivo_metadatos"],
-                sal["archivo_backtest"], sal["reporte_calidad"]]
+                sal["archivo_backtest"], sal["reporte_calidad"], sal["archivo_parametros"]]
 
     if not aprobado:
         existe = os.path.exists(os.path.join(apr, sal["archivo_estimaciones"]))
@@ -382,7 +425,9 @@ def ejecutar(config_path, usar_muestra=False, fuente=None):
                  "config": config_path,
                  "huella_config": fingerprint(config_path),
                  "version_procedimiento": cfg["proyecto"]["version_procedimiento"],
-                 "aprobado": False}
+                 "aprobado": False,
+                 "etapas_completadas": []}
+    hechas = metadatos["etapas_completadas"]
     reporte = None
     codigo = SALIDA_ERROR
     try:
@@ -390,6 +435,7 @@ def ejecutar(config_path, usar_muestra=False, fuente=None):
         metadatos["fuente"] = {"ruta": ruta, "huella": fp, "filas": int(len(df)),
                                "es_muestra_sintetica": ruta == cfg["fuentes"][
                                    "migracion_mensual"]["ruta_respaldo_muestra"]}
+        hechas.append("lectura")
 
         reporte, hay_critico = quality.ejecutar_controles(df, cfg)
         _escribir_json(os.path.join(sal["carpeta_candidata"], sal["reporte_calidad"]), reporte)
@@ -399,6 +445,8 @@ def ejecutar(config_path, usar_muestra=False, fuente=None):
         metadatos["controles"] = reporte["resumen"]
         metadatos["controles_detalle"] = {r["control"]: r["estado"]
                                           for r in reporte["controles"]}
+        metadatos["perfil_calidad"] = reporte["perfil"]
+        hechas.append("validacion")
 
         if hay_critico:
             log(reg, "validacion",
@@ -410,7 +458,15 @@ def ejecutar(config_path, usar_muestra=False, fuente=None):
             codigo = SALIDA_CONTROL_CRITICO
         else:
             serie = etapa_preparacion(df, cfg, reg)
+            hechas.append("preparacion")
+            # Ajuste: parametros con toda la informacion disponible (origen de
+            # los meses futuros). Se guardan con la formula para reproducirlos.
+            parametros = {"metodo": cfg["procedimiento"]["metodo"], "formula": FORMULA,
+                          "parametros_horizonte": parametros_ajustados(
+                              serie, serie["periodo"].max() + pd.offsets.MonthBegin(1), cfg)}
+            hechas.append("ajuste")
             ev, metr, metr_ocultos = etapa_evaluacion(serie, cfg, reg)
+            hechas.append("evaluacion")
             metadatos["metricas"] = metr
             metadatos["metricas_meses_ocultos"] = metr_ocultos
             metadatos["periodos"] = {k: cfg["periodos"][k] for k in
@@ -420,14 +476,19 @@ def ejecutar(config_path, usar_muestra=False, fuente=None):
             metadatos["umbrales"] = cfg["aceptacion"]
 
             estimaciones = etapa_estimaciones(serie, cfg, metr, run_id, reg)
+            hechas.append("estimaciones")
             aprobado, razones = regla_aceptacion(metr, hay_critico, estimaciones, cfg, reg)
             metadatos["aprobado"] = aprobado
             metadatos["razones_rechazo"] = razones
             metadatos["estado"] = "aprobado" if aprobado else "rechazado_por_regla"
             metadatos["fin"] = datetime.now(timezone.utc).isoformat()
 
-            etapa_almacenamiento(estimaciones, ev, metadatos, cfg, reg)
+            hechas.append("aceptacion")
+            etapa_almacenamiento(estimaciones, ev, parametros, metadatos, cfg, reg)
+            hechas.append("almacenamiento")
             metadatos["version_guardada"] = etapa_publicacion(cfg, aprobado, run_id, reg)
+            if aprobado:
+                hechas.append("publicacion")
             codigo = SALIDA_OK if aprobado else SALIDA_RECHAZADA
     except Exception as e:
         log(reg, "error", f"Fallo no controlado: {e}", "ERROR")
@@ -437,6 +498,8 @@ def ejecutar(config_path, usar_muestra=False, fuente=None):
 
     metadatos.setdefault("fin", datetime.now(timezone.utc).isoformat())
     metadatos["codigo_salida"] = codigo
+    metadatos["publicacion"] = ("publicada" if metadatos.get("version_guardada") else
+                                "no publicada; se conserva la ultima version aprobada")
     if metadatos["estado"] != "aprobado":
         # La candidata queda con el registro de por que no se publico
         _escribir_json(os.path.join(sal["carpeta_candidata"], sal["archivo_metadatos"]),
@@ -450,8 +513,21 @@ def ejecutar(config_path, usar_muestra=False, fuente=None):
             _escribir_json(os.path.join(carpeta, sal["archivo_metadatos"]), metadatos)
     _registrar(metadatos, reg, cfg)
     log(reg, "fin", f"run_id={run_id} estado={metadatos['estado']} codigo={codigo}")
+    reg.append(_resumen(metadatos, reg))
     _guardar_log(reg, run_id, cfg)
     return codigo, metadatos
+
+
+def _resumen(metadatos, reg):
+    """Ultima linea del log: resume la corrida en un solo registro."""
+    return {"etapa": "resumen", "run_id": metadatos["run_id"],
+            "inicio": metadatos["inicio"], "fin": metadatos["fin"],
+            "estado": metadatos.get("estado"), "codigo_salida": metadatos["codigo_salida"],
+            "etapas_completadas": metadatos.get("etapas_completadas", []),
+            "advertencias": [f"{x['etapa']}: {x['msg']}" for x in reg
+                             if x.get("nivel") == "ADVERTENCIA"],
+            "errores": [f"{x['etapa']}: {x['msg']}" for x in reg if x.get("nivel") == "ERROR"],
+            "publicacion": metadatos.get("publicacion")}
 
 
 def _registrar(metadatos, reg, cfg):
@@ -462,7 +538,8 @@ def _registrar(metadatos, reg, cfg):
     linea = {k: metadatos.get(k) for k in
              ("run_id", "inicio", "fin", "commit", "estado", "aprobado",
               "codigo_salida", "version_procedimiento", "huella_config",
-              "mlflow_run_id", "razones_rechazo")}
+              "mlflow_run_id", "razones_rechazo", "etapas_completadas",
+              "publicacion", "perfil_calidad")}
     linea["huella_fuente"] = (metadatos.get("fuente") or {}).get("huella")
     linea["controles"] = metadatos.get("controles")
     linea["MAE"], linea["RMSE"] = proc.get("MAE"), proc.get("RMSE")

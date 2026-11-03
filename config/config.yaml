@@ -91,8 +91,7 @@ controles:
   faltantes:
     columnas_permiten_na: ["dias_fuente"]  # NA tolerado aqui
     columnas_bloquean_na: ["periodo", "destino", "viajeros"]
-  variacion:
-    umbral_variacion_relativa: 0.80  # cambio mes a mes > 80% => alerta (no error)
+  # La variacion mes a mes se vigila en monitoreo.umbral_variacion_relativa.
 
 # ---- Salida que consume el tablero ----
 salida:
@@ -102,6 +101,7 @@ salida:
   archivo_metadatos: "run_metadata.json"
   reporte_calidad: "reporte_calidad.json"
   archivo_backtest: "backtest.csv"
+  archivo_parametros: "parametros_ajustados.json"  # formula + parametros para reproducir
   carpeta_versiones: "results/versions"   # historial de versiones aprobadas
   registro_corridas: "results/registro_corridas.jsonl"  # una linea por corrida
   carpeta_logs: "logs"
@@ -116,8 +116,28 @@ mlflow:
   experimento: "observatorio_flujo_mensual_nacional"
 
 # ---- Monitoreo ----
+# Tres verificaciones (scripts/monitor.py). Toda alerta es para REVISION: no
+# cambia la version publicada ni demuestra por si sola perdida de precision.
 monitoreo:
+  # 1. Actualizacion: la fuente y la version aprobada deben llegar al ultimo
+  #    periodo esperado segun la cobertura configurada (periodos.fin_serie).
+  #    La version aprobada debe ademas cubrir horizonte_meses meses futuros.
   dias_max_sin_actualizar: 45     # version aprobada mas vieja => alerta de actualizacion
+  # 2. Calidad: compara el perfil de la ultima corrida con el de la anterior.
+  #    Un aumento mayor a la tolerancia (conteo absoluto) genera alerta.
+  tolerancia_calidad:
+    faltantes: 0
+    duplicados: 0
+    periodos_sin_informacion: 0
+    meses_cobertura_parcial: 0
   max_corridas_fallidas_seguidas: 2
+  # 3. Resultados: estimaciones negativas o no finitas => alerta. Una variacion
+  #    respecto del mes anterior mayor a este umbral => alerta para revision.
+  #    En la serie, el 95 % de los cambios mes a mes es menor a 28 % y solo
+  #    los meses de la pandemia (2020-04 a 2020-07) superan 80 %: el umbral
+  #    deja pasar la estacionalidad normal y marca solo saltos excepcionales.
+  umbral_variacion_relativa: 0.80
+  # El error predictivo solo se compara entre versiones con observados
+  # comparables (n_meses > 0 en el backtesting).
   degradacion_mae_relativa: 0.25  # MAE nuevo > 25% peor que la aprobada previa => alerta
   reporte: "results/monitoreo.json"

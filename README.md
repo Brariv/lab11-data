@@ -80,12 +80,24 @@ Compose se monta en solo lectura.
    usando solo meses anteriores al estimado.
 5. **Evaluacion**: backtesting con origen movil sobre 2021-04 a 2025-12 (57 meses)
    frente a dos referencias (ultimo valor y promedio historico). *Punto de evaluacion.*
+   MAE y RMSE usan todos los meses evaluados; el MAPE excluye los meses con
+   observado igual a cero (el error relativo no esta definido) y reporta cuantos
+   meses entraron (`n_meses_mape`).
 6. **Estimaciones** con el esquema del tablero: meses observados, meses ocultos
    (2025-11, 2025-12, con su observado para contrastar) y horizonte de 2 meses
    futuros (2026-01, 2026-02, sin error calculable).
 7. **Almacenamiento** de la version candidata.
 8. **Publicacion** solo si la regla lo autoriza; copia inmutable en
    `results/versions/<run_id>/`. *Punto de autorizacion.*
+
+El ajuste (paso 4) guarda en `parametros_ajustados.json` la formula del
+procedimiento, el nivel y los 12 indices estacionales con los que se calculan
+los meses futuros, para reproducir la estimacion sin volver a correr el codigo:
+`estimacion(t) = max(0, nivel * indice_estacional[mes(t)])`.
+
+Cada corrida deja `logs/<run_id>.jsonl`; su ultima linea (`"etapa": "resumen"`)
+tiene hora de inicio y fin, etapas completadas, advertencias, errores y
+resultado de la publicacion.
 
 Codigos de salida: `0` aprobada y publicada · `1` rechazada por la regla ·
 `2` detenida por control critico · `3` error no controlado. En los casos 1-3
@@ -117,10 +129,10 @@ valor) y 53 666 (promedio historico) en 57 meses: **aprobada**.
 ## MLflow Tracking
 Cada corrida, **incluidas las detenidas y las rechazadas**, se registra en el
 experimento `observatorio_flujo_mensual_nacional` con:
-- tags: commit, run_id del pipeline, estado, ruta y huella de la fuente, huella de la configuracion;
+- tags: commit, run_id del pipeline, estado, ruta y huella de la fuente, huella de la configuracion, etapas completadas, ultimo periodo de la fuente;
 - parametros: metodo, ventana, factor de reparto, periodos, umbrales, semilla;
-- metricas: MAE/RMSE/MAPE del backtesting y de los meses ocultos (procedimiento y referencias), conteo de controles, aprobado;
-- artefactos: `config.yaml`, reporte de calidad, estimaciones, backtest, metadatos y log.
+- metricas: MAE/RMSE/MAPE del backtesting y de los meses ocultos (procedimiento y referencias), conteo de controles, perfil de calidad (faltantes, duplicados, cobertura), aprobado;
+- artefactos: `config.yaml`, reporte de calidad, estimaciones, backtest, parametros ajustados, metadatos y log.
 
 Las corridas detenidas por un control critico quedan con estado `FAILED`.
 La URI se toma de `MLFLOW_TRACKING_URI` (Docker: `http://mlflow:5000`) o de
@@ -142,9 +154,20 @@ python scripts/restore_version.py --listar     # * marca la vigente
 python scripts/restore_version.py --anterior --motivo "..."
 python scripts/restore_version.py --run-id run-...
 ```
-El monitoreo alerta si la version aprobada tiene mas de 45 dias, si hay 2 o mas
-corridas seguidas sin aprobar, o si el MAE empeoro mas de 25 % respecto de la
-aprobada anterior. La restauracion copia una version ya aprobada (no reajusta
+El monitoreo hace tres verificaciones (umbrales en `config.yaml`, seccion `monitoreo`):
+
+| Verificacion | Alerta si |
+|---|---|
+| **Actualizacion** | la fuente de la ultima corrida o los observados publicados no llegan a `fin_serie` (2025-12); la version no estima los `horizonte_meses` siguientes; o tiene mas de 45 dias sin renovarse |
+| **Calidad** | aumentaron los faltantes, duplicados, periodos sin informacion o meses con cobertura parcial respecto de la corrida anterior; o hay 2 o mas corridas seguidas sin aprobar |
+| **Resultados** | hay estimaciones negativas o no finitas; una estimacion varia mas de 80 % respecto del mes anterior; o el MAE empeoro mas de 25 % frente a la aprobada anterior (solo entre versiones evaluadas con observados comparables) |
+
+Una alerta pide revision: no cambia la version publicada, y una variacion alta
+no demuestra por si sola perdida de precision. El umbral de 80 % sale de la
+serie: el 95 % de los cambios mes a mes es menor a 28 % y solo los meses de la
+pandemia (2020-04 a 2020-07) lo superan.
+
+La restauracion copia una version ya aprobada (no reajusta
 nada) y queda registrada en `results/registro_corridas.jsonl` y en
 `results/approved/restauracion.json`, que el tablero muestra como aviso.
 
@@ -160,16 +183,18 @@ python -m src.run_pipeline                                                # recu
 real de toda la secuencia esta en `docs/evidencia/`.
 
 ## Pruebas automaticas
-`python -m pytest -q tests`: 19 pruebas (controles, publicacion con el esquema del
+`python -m pytest -q tests`: 27 pruebas (controles, publicacion con el esquema del
 tablero, corridas equivalentes, detencion por cada control critico, rechazo por
-la regla, restauracion y monitoreo). Escriben en directorios temporales y no
+la regla, restauracion, log por corrida, parametros reproducibles, MAPE con
+ceros y las tres verificaciones de monitoreo). Escriben en directorios temporales y no
 tocan `results/approved`.
 
 ## Salida que consume el tablero
 `results/approved/estimaciones.csv`: destino, periodo_estimado, valor,
 valor_observado, unidad, tipo (observado | estimacion), run_id,
 fecha_generacion, version_procedimiento, metodo y metrica_validacion_MAE.
-Junto a ella: `run_metadata.json`, `backtest.csv` y `reporte_calidad.json`.
+Junto a ella: `run_metadata.json`, `backtest.csv`, `reporte_calidad.json` y
+`parametros_ajustados.json`.
 
 ## Limitaciones
 - La version publicada en el repo se genero con la **muestra sintetica**: sirve para mostrar el flujo, no es dato oficial.

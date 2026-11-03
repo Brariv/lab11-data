@@ -52,6 +52,11 @@ def restaurar(cfg, run_id, motivo="restauracion manual"):
     for a in archivos:  # la tabla de estimaciones se reemplaza al final
         shutil.copy2(os.path.join(origen, a), os.path.join(apr, a + ".tmp"))
         os.replace(os.path.join(apr, a + ".tmp"), os.path.join(apr, a))
+    # Un archivo de la version vigente que la restaurada no tiene (p. ej. una
+    # version previa a parametros_ajustados.json) se quita para no mezclarlas.
+    for a in (sal["archivo_backtest"], sal["reporte_calidad"], sal.get("archivo_parametros")):
+        if a and a not in archivos and os.path.exists(os.path.join(apr, a)):
+            os.remove(os.path.join(apr, a))
 
     evento = {"evento": "restauracion", "ts": datetime.now(timezone.utc).isoformat(),
               "run_id": run_id, "reemplaza_a": previa, "motivo": motivo,
