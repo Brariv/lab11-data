@@ -1,14 +1,20 @@
 $ python scripts/restore_version.py --listar
-  run-20261102T060112552648Z
-* run-20261102T060118512274Z
-$ python scripts/restore_version.py --anterior --motivo "prueba de recuperacion"
-Restaurada run-20261102T060112552648Z (reemplaza a run-20261102T060118512274Z) en results/approved
+  run-20261103T032802496276Z
+* run-20261103T032806399089Z
+codigo de salida: 0
+$ python scripts/restore_version.py --anterior --motivo prueba de recuperacion
+Restaurada run-20261103T032802496276Z (reemplaza a run-20261103T032806399089Z) en results/approved
+codigo de salida: 0
 $ python scripts/restore_version.py --listar
-* run-20261102T060112552648Z
-  run-20261102T060118512274Z
+* run-20261103T032802496276Z
+  run-20261103T032806399089Z
+codigo de salida: 0
+
+Version que lee el tablero tras restaurar:
+   run-20261103T032802496276Z aprobado
 
 $ python -m src.run_pipeline   # recuperacion: datos corregidos, nueva version aprobada
-[INFO] inicio: run_id=run-20261102T060134547088Z commit=a021409-modificado
+[INFO] inicio: run_id=run-20261103T032815694905Z commit=bef6d2e
 [ADVERTENCIA] lectura: Usando muestra sintetica (no hay datos institucionales en data/institucional/migracion_mensual.csv)
 [INFO] lectura: Leidas 204 filas de data/sample/migracion_mensual_sample.csv (huella ec60d714ed6df774)
 [INFO] validacion: ok=6 adv=0 err=0
@@ -19,7 +25,33 @@ $ python -m src.run_pipeline   # recuperacion: datos corregidos, nueva version a
 [INFO] estimaciones: 202 observados, 4 estimaciones
 [INFO] aceptacion: APROBADA
 [INFO] almacenamiento: Version candidata guardada en results/candidate
-[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions\run-20261102T060134547088Z)
-[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=f80999cc53934c5eb91a31e9f17f9c3e
-[INFO] fin: run_id=run-20261102T060134547088Z estado=aprobado codigo=0
+[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions/run-20261103T032815694905Z)
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=aefb39c4009c4a43a8a6c59742aebc28
+[INFO] fin: run_id=run-20261103T032815694905Z estado=aprobado codigo=0
 codigo de salida: 0
+
+Resumen de la corrida (ultima linea de logs/<run_id>.jsonl):
+{
+    "etapa": "resumen",
+    "run_id": "run-20261103T032815694905Z",
+    "inicio": "2026-11-03T03:28:15.699665+00:00",
+    "fin": "2026-11-03T03:28:15.854424+00:00",
+    "estado": "aprobado",
+    "codigo_salida": 0,
+    "etapas_completadas": [
+        "lectura",
+        "validacion",
+        "preparacion",
+        "ajuste",
+        "evaluacion",
+        "estimaciones",
+        "aceptacion",
+        "almacenamiento",
+        "publicacion"
+    ],
+    "advertencias": [
+        "lectura: Usando muestra sintetica (no hay datos institucionales en data/institucional/migracion_mensual.csv)"
+    ],
+    "errores": [],
+    "publicacion": "publicada"
+}

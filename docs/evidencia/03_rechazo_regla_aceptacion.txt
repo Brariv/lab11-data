@@ -1,9 +1,11 @@
 $ python scripts/inject_fault.py metrica_degradada
 Falla 'metrica_degradada' inyectada -> data/sample/migracion_con_falla.csv
+Ejecute: python -m src.run_pipeline --fuente data/sample/migracion_con_falla.csv
+codigo de salida: 0
 $ python -m src.run_pipeline --fuente data/sample/migracion_con_falla.csv
-[INFO] inicio: run_id=run-20261102T060129573528Z commit=a021409-modificado
+[INFO] inicio: run_id=run-20261103T032812894711Z commit=bef6d2e
 [ADVERTENCIA] lectura: Fuente indicada por linea de comandos: data/sample/migracion_con_falla.csv
-[INFO] lectura: Leidas 204 filas de data/sample/migracion_con_falla.csv (huella 52429fc8b3ad0c58)
+[INFO] lectura: Leidas 204 filas de data/sample/migracion_con_falla.csv (huella 2456d16c1132d520)
 [INFO] validacion: ok=6 adv=0 err=0
 [INFO] preparacion: Factor de reparto activo (perfil_estacional); no hay registros sin mes que repartir
 [INFO] preparacion: Serie mensual preparada: 204 meses
@@ -13,6 +15,9 @@ $ python -m src.run_pipeline --fuente data/sample/migracion_con_falla.csv
 [ADVERTENCIA] aceptacion: RECHAZADA: ['MAE 325431 > umbral 120000', 'RMSE 364971 > umbral 160000']
 [INFO] almacenamiento: Version candidata guardada en results/candidate
 [ADVERTENCIA] publicacion: No se publica. Se conserva la ultima version aprobada.
-[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=c2e9b0c7b0374bf39a771f9e1f2a6978
-[INFO] fin: run_id=run-20261102T060129573528Z estado=rechazado_por_regla codigo=1
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=9534155eabce4b2e8c8be9e5fdf2ddf0
+[INFO] fin: run_id=run-20261103T032812894711Z estado=rechazado_por_regla codigo=1
 codigo de salida: 1
+
+Version aprobada vigente tras el rechazo:
+   run-20261103T032806399089Z aprobado

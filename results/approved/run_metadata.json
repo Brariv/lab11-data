@@ -1,11 +1,22 @@
 {
-  "run_id": "run-20261102T060134547088Z",
-  "inicio": "2026-11-02T06:01:34.605637+00:00",
-  "commit": "a021409-modificado",
+  "run_id": "run-20261103T032815694905Z",
+  "inicio": "2026-11-03T03:28:15.699665+00:00",
+  "commit": "bef6d2e",
   "config": "config/config.yaml",
-  "huella_config": "fd4fe81c34d828be",
+  "huella_config": "f18ec9c6d9cbdb18",
   "version_procedimiento": "1.0.0",
   "aprobado": true,
+  "etapas_completadas": [
+    "lectura",
+    "validacion",
+    "preparacion",
+    "ajuste",
+    "evaluacion",
+    "estimaciones",
+    "aceptacion",
+    "almacenamiento",
+    "publicacion"
+  ],
   "fuente": {
     "ruta": "data/sample/migracion_mensual_sample.csv",
     "huella": "ec60d714ed6df774",
@@ -25,24 +36,35 @@
     "valores_y_denominadores": "ok",
     "regla_metodologica": "ok"
   },
+  "perfil_calidad": {
+    "filas": 204,
+    "faltantes": 0,
+    "duplicados": 0,
+    "periodos_sin_informacion": 0,
+    "meses_cobertura_parcial": 0,
+    "ultimo_periodo": "2025-12-01"
+  },
   "metricas": {
     "procedimiento": {
       "MAE": 44941.3354400841,
       "RMSE": 61837.83925198978,
       "MAPE": 15.612396643928527,
-      "n_meses": 57
+      "n_meses": 57,
+      "n_meses_mape": 57
     },
     "ref_ultimo_valor": {
       "MAE": 49947.01754385965,
       "RMSE": 64003.87759168916,
       "MAPE": 16.878051041636475,
-      "n_meses": 57
+      "n_meses": 57,
+      "n_meses_mape": 57
     },
     "ref_promedio_hist": {
       "MAE": 53665.66258894796,
       "RMSE": 72887.64881699007,
       "MAPE": 16.26883131655691,
-      "n_meses": 57
+      "n_meses": 57,
+      "n_meses_mape": 57
     }
   },
   "metricas_meses_ocultos": {
@@ -50,19 +72,22 @@
       "MAE": 10414.486635357753,
       "RMSE": 12635.39758553569,
       "MAPE": 2.731490782317457,
-      "n_meses": 2
+      "n_meses": 2,
+      "n_meses_mape": 2
     },
     "ref_ultimo_valor": {
       "MAE": 65872.5,
       "RMSE": 69435.7117231472,
       "MAPE": 18.104917129818542,
-      "n_meses": 2
+      "n_meses": 2,
+      "n_meses_mape": 2
     },
     "ref_promedio_hist": {
       "MAE": 89432.28490952542,
       "RMSE": 99583.14300530893,
       "MAPE": 24.082993358657184,
-      "n_meses": 2
+      "n_meses": 2,
+      "n_meses_mape": 2
     }
   },
   "periodos": {
@@ -99,8 +124,9 @@
   },
   "razones_rechazo": [],
   "estado": "aprobado",
-  "fin": "2026-11-02T06:01:34.754193+00:00",
-  "version_guardada": "results/versions\\run-20261102T060134547088Z",
+  "fin": "2026-11-03T03:28:15.854424+00:00",
+  "version_guardada": "results/versions/run-20261103T032815694905Z",
   "codigo_salida": 0,
-  "mlflow_run_id": "f80999cc53934c5eb91a31e9f17f9c3e"
+  "publicacion": "publicada",
+  "mlflow_run_id": "aefb39c4009c4a43a8a6c59742aebc28"
 }

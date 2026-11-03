@@ -1,5 +1,7 @@
-$ python -m src.run_pipeline --config config/config.yaml   # corrida 1
-[INFO] inicio: run_id=run-20261102T060112552648Z commit=a021409-modificado
+$ python -m src.run_pipeline --config config/config.yaml
+2026/11/02 21:28:03 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2026/11/02 21:28:03 INFO mlflow.store.db.utils: Updating database tables
+[INFO] inicio: run_id=run-20261103T032802496276Z commit=bef6d2e
 [ADVERTENCIA] lectura: Usando muestra sintetica (no hay datos institucionales en data/institucional/migracion_mensual.csv)
 [INFO] lectura: Leidas 204 filas de data/sample/migracion_mensual_sample.csv (huella ec60d714ed6df774)
 [INFO] validacion: ok=6 adv=0 err=0
@@ -10,13 +12,13 @@ $ python -m src.run_pipeline --config config/config.yaml   # corrida 1
 [INFO] estimaciones: 202 observados, 4 estimaciones
 [INFO] aceptacion: APROBADA
 [INFO] almacenamiento: Version candidata guardada en results/candidate
-[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions\run-20261102T060112552648Z)
-[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=a2bcdf7fb4c346e8ad95875b727e185d
-[INFO] fin: run_id=run-20261102T060112552648Z estado=aprobado codigo=0
+[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions/run-20261103T032802496276Z)
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=aecac55005b14176b04ce5b29f7135d4
+[INFO] fin: run_id=run-20261103T032802496276Z estado=aprobado codigo=0
 codigo de salida: 0
 
-$ python -m src.run_pipeline --config config/config.yaml   # corrida 2 (equivalente)
-[INFO] inicio: run_id=run-20261102T060118512274Z commit=a021409-modificado
+$ python -m src.run_pipeline --config config/config.yaml
+[INFO] inicio: run_id=run-20261103T032806399089Z commit=bef6d2e
 [ADVERTENCIA] lectura: Usando muestra sintetica (no hay datos institucionales en data/institucional/migracion_mensual.csv)
 [INFO] lectura: Leidas 204 filas de data/sample/migracion_mensual_sample.csv (huella ec60d714ed6df774)
 [INFO] validacion: ok=6 adv=0 err=0
@@ -27,7 +29,13 @@ $ python -m src.run_pipeline --config config/config.yaml   # corrida 2 (equivale
 [INFO] estimaciones: 202 observados, 4 estimaciones
 [INFO] aceptacion: APROBADA
 [INFO] almacenamiento: Version candidata guardada en results/candidate
-[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions\run-20261102T060118512274Z)
-[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=49679d991aa44a2db2ef5022220452fc
-[INFO] fin: run_id=run-20261102T060118512274Z estado=aprobado codigo=0
+[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions/run-20261103T032806399089Z)
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=105dcea7aeb8407c8aab55005205e8a7
+[INFO] fin: run_id=run-20261103T032806399089Z estado=aprobado codigo=0
 codigo de salida: 0
+
+Comparacion de las dos corridas (registro de corridas):
+  huella_fuente  ['ec60d714ed6df774', 'ec60d714ed6df774'] iguales
+  huella_config  ['f18ec9c6d9cbdb18', 'f18ec9c6d9cbdb18'] iguales
+  MAE            [44941.3354400841, 44941.3354400841] iguales
+  RMSE           [61837.83925198978, 61837.83925198978] iguales

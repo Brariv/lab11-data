@@ -1,20 +1,63 @@
+== 1. Estado normal tras la recuperacion ==
 $ python scripts/monitor.py
 {
-  "generado": "2026-11-02T06:01:38.462068+00:00",
+  "generado": "2026-11-03T03:28:33.546164+00:00",
   "estado": "ok",
   "alertas": [],
   "advertencias": [
     "La version vigente se genero con la muestra sintetica, no con datos institucionales"
   ],
+  "verificaciones": {
+    "actualizacion": {
+      "estado": "ok",
+      "alertas": [],
+      "detalle": {
+        "ultimo_periodo_esperado": "2025-12",
+        "ultimo_periodo_fuente": "2025-12",
+        "ultimo_periodo_observado_publicado": "2025-12",
+        "ultimo_periodo_estimado": "2026-02",
+        "dias_desde_actualizacion": 0.0
+      }
+    },
+    "calidad": {
+      "estado": "ok",
+      "alertas": [],
+      "detalle": {
+        "perfil_ultima_corrida": {
+          "filas": 204,
+          "faltantes": 0,
+          "duplicados": 0,
+          "periodos_sin_informacion": 0,
+          "meses_cobertura_parcial": 0,
+          "ultimo_periodo": "2025-12-01"
+        },
+        "comparada_con": "run-20261103T032812894711Z",
+        "cambios_vs_anterior": {
+          "faltantes": 0,
+          "duplicados": 0,
+          "periodos_sin_informacion": 0,
+          "meses_cobertura_parcial": 0
+        },
+        "corridas_sin_aprobar_seguidas": 0
+      }
+    },
+    "resultados": {
+      "estado": "ok",
+      "alertas": [],
+      "detalle": {
+        "variacion_maxima_estimaciones": 0.2394,
+        "cambio_relativo_MAE": 0.0,
+        "MAE_vigente": 44941.3354400841
+      }
+    }
+  },
   "detalle": {
-    "version_vigente": "run-20261102T060134547088Z",
-    "dias_desde_actualizacion": 0.0,
+    "version_vigente": "run-20261103T032815694905Z",
     "corridas_registradas": 5,
-    "corridas_sin_aprobar_seguidas": 0,
     "ultima_corrida": {
-      "run_id": "run-20261102T060134547088Z",
+      "run_id": "run-20261103T032815694905Z",
       "estado": "aprobado",
-      "fin": "2026-11-02T06:01:34.754193+00:00",
+      "fin": "2026-11-03T03:28:15.854424+00:00",
       "controles": {
         "ok": 6,
         "advertencias": 0,
@@ -22,16 +65,66 @@ $ python scripts/monitor.py
       },
       "razones_rechazo": []
     },
+    "ultimo_periodo_esperado": "2025-12",
+    "ultimo_periodo_fuente": "2025-12",
+    "ultimo_periodo_observado_publicado": "2025-12",
+    "ultimo_periodo_estimado": "2026-02",
+    "dias_desde_actualizacion": 0.0,
+    "comparada_con": "run-20261103T032812894711Z",
+    "corridas_sin_aprobar_seguidas": 0,
+    "variacion_maxima_estimaciones": 0.2394,
     "cambio_relativo_MAE": 0.0,
     "MAE_vigente": 44941.3354400841
   }
 }
 codigo de salida: 0
 
-$ tail results/registro_corridas.jsonl
-  run-20261102T060112552648Z  aprobado                        MAE=44941.3354400841
-  run-20261102T060118512274Z  aprobado                        MAE=44941.3354400841
-  run-20261102T060123988358Z  detenido_por_control_critico    MAE=None
-  run-20261102T060129573528Z  rechazado_por_regla             MAE=325430.7045407853
-  run-20261102T060112552648Z  restaurado                      MAE=None
-  run-20261102T060134547088Z  aprobado                        MAE=44941.3354400841
+== Pruebas de alerta (en una copia; no afectan la version aprobada del repo) ==
+
+== 2. Actualizacion: la fuente llega solo a 2025-08 ==
+$ python -m src.run_pipeline --fuente data/sample/fuente_atrasada.csv
+[INFO] validacion: ok=5 adv=1 err=0
+[INFO] aceptacion: APROBADA
+[INFO] publicacion: Version aprobada publicada en results/approved (copia en results/versions/run-20261103T032834616183Z)
+[INFO] fin: run_id=run-20261103T032834616183Z estado=aprobado codigo=0
+$ python scripts/monitor.py
+codigo de salida: 1
+estado: alerta
+  actualizacion  alerta
+  calidad        alerta
+  resultados     ok
+  ALERTA [actualizacion] La fuente de la ultima corrida llega a 2025-08; se esperaba 2025-12
+  ALERTA [actualizacion] La version aprobada solo tiene observados hasta 2025-08; se esperaba 2025-12
+  ALERTA [actualizacion] La version aprobada estima hasta 2025-10; con un horizonte de 2 meses se esperaba 2026-02
+  ALERTA [calidad] Aumentaron los periodos sin informacion: 0 -> 4
+(La regla de aceptacion no revisa la fecha de la fuente: la version atrasada se publica
+ y es el monitoreo el que la detecta; se restaura la anterior.)
+$ python scripts/restore_version.py --anterior --motivo "fuente atrasada"
+Restaurada run-20261103T032815694905Z (reemplaza a run-20261103T032834616183Z) en results/approved
+
+== 3. Calidad: aparecen 4 NA en dias_fuente (ausencia permitida: la corrida se aprueba) ==
+$ python -m src.run_pipeline --fuente data/sample/fuente_con_na.csv
+[INFO] validacion: ok=5 adv=1 err=0
+[INFO] aceptacion: APROBADA
+[INFO] fin: run_id=run-20261103T032838302329Z estado=aprobado codigo=0
+$ python scripts/monitor.py
+codigo de salida: 1
+estado: alerta
+  actualizacion  ok
+  calidad        alerta
+  resultados     ok
+  ALERTA [calidad] Aumentaron los valores faltantes: 0 -> 4
+  cambios vs anterior: {'faltantes': 4, 'duplicados': 0, 'periodos_sin_informacion': -4, 'meses_cobertura_parcial': 0}
+  (periodos_sin_informacion = -4: se compara con la corrida atrasada del caso 2)
+
+== 4. Resultados: estimacion de 2026-01 con un salto de +200 % y 2026-02 negativa ==
+(se alteran a mano los archivos aprobados de la copia para simular una salida defectuosa)
+$ python scripts/monitor.py
+codigo de salida: 1
+estado: alerta
+  actualizacion  ok
+  calidad        ok
+  resultados     alerta
+  ALERTA [resultados] Estimaciones negativas en 2026-02
+  ALERTA [resultados] Estimacion de 2026-01 varia 200% respecto del mes anterior (> 80%); revisar, no implica por si sola perdida de precision
+  ALERTA [resultados] Estimacion de 2026-02 varia 100% respecto del mes anterior (> 80%); revisar, no implica por si sola perdida de precision

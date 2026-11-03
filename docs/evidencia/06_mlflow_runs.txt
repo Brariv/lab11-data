@@ -1,8 +1,23 @@
 MLflow Tracking - experimento observatorio_flujo_mensual_nacional
+Consulta: mlflow.search_runs(experiment_names=["observatorio_flujo_mensual_nacional"])
 
-       tags.mlflow.runName   status                  tags.estado  metrics.backtest.procedimiento.MAE  metrics.backtest.ref_ultimo_valor.MAE  metrics.controles.errores tags.fuente.huella tags.huella_config
-run-20261102T060112552648Z FINISHED                     aprobado                        44941.335440                           49947.017544                        0.0   ec60d714ed6df774   fd4fe81c34d828be
-run-20261102T060118512274Z FINISHED                     aprobado                        44941.335440                           49947.017544                        0.0   ec60d714ed6df774   fd4fe81c34d828be
-run-20261102T060123988358Z   FAILED detenido_por_control_critico                                 NaN                                    NaN                        2.0   75d2d97763db400d   fd4fe81c34d828be
-run-20261102T060129573528Z FINISHED          rechazado_por_regla                       325430.704541                          767734.192982                        0.0   52429fc8b3ad0c58   fd4fe81c34d828be
-run-20261102T060134547088Z FINISHED                     aprobado                        44941.335440                           49947.017544                        0.0   ec60d714ed6df774   fd4fe81c34d828be
+                       run   status                       estado  commit    huella_fuente    huella_config     MAE MAE_ult  ctrl_err  faltantes                                                                                              etapas
+run-20261103T032802496276Z FINISHED                     aprobado bef6d2e ec60d714ed6df774 f18ec9c6d9cbdb18  44,941  49,947       0.0        0.0 lectura,validacion,preparacion,ajuste,evaluacion,estimaciones,aceptacion,almacenamiento,publicacion
+run-20261103T032806399089Z FINISHED                     aprobado bef6d2e ec60d714ed6df774 f18ec9c6d9cbdb18  44,941  49,947       0.0        0.0 lectura,validacion,preparacion,ajuste,evaluacion,estimaciones,aceptacion,almacenamiento,publicacion
+run-20261103T032809928595Z   FAILED detenido_por_control_critico bef6d2e 6db208e945205026 f18ec9c6d9cbdb18       -       -       2.0        0.0                                                                                  lectura,validacion
+run-20261103T032812894711Z FINISHED          rechazado_por_regla bef6d2e 2456d16c1132d520 f18ec9c6d9cbdb18 325,431 767,734       0.0        0.0             lectura,validacion,preparacion,ajuste,evaluacion,estimaciones,aceptacion,almacenamiento
+run-20261103T032815694905Z FINISHED                     aprobado bef6d2e ec60d714ed6df774 f18ec9c6d9cbdb18  44,941  49,947       0.0        0.0 lectura,validacion,preparacion,ajuste,evaluacion,estimaciones,aceptacion,almacenamiento,publicacion
+
+Las corridas detenidas por un control critico quedan FAILED y sin metricas de
+evaluacion (no se inventan: la corrida se detuvo antes de evaluar).
+
+Artefactos de la ultima corrida aprobada (run-20261103T032815694905Z):
+  candidata
+    candidata/backtest.csv
+    candidata/estimaciones.csv
+    candidata/parametros_ajustados.json
+    candidata/reporte_calidad.json
+    candidata/run_metadata.json
+  config
+    config/config.yaml
+  log_corrida.jsonl

@@ -1,0 +1,24 @@
+{
+  "metodo": "baseline_estacional",
+  "formula": "estimacion(t) = max(0, nivel * indice_estacional[mes(t)]); nivel = media de viajeros(k)/indice_estacional[mes(k)] en los ultimos ventana_nivel_meses meses antes de t; indice_estacional[m] = media de viajeros del mes m / media global, con meses anteriores a t",
+  "parametros_horizonte": {
+    "origen_datos_hasta": "2025-12-01",
+    "meses_usados": 204,
+    "ventana_nivel_meses": 12,
+    "nivel": 292048.4305799699,
+    "indice_estacional": {
+      "1": 1.0463872995500565,
+      "2": 0.8973035066175123,
+      "3": 1.0518058463337874,
+      "4": 1.011937532849829,
+      "5": 0.860590548655179,
+      "6": 0.9213460930640135,
+      "7": 1.0223137044152901,
+      "8": 1.0396238616581335,
+      "9": 0.832934785553879,
+      "10": 0.9372249778527827,
+      "11": 1.0617729247047771,
+      "12": 1.3167589187447593
+    }
+  }
+}

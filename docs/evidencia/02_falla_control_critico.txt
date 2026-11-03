@@ -1,13 +1,15 @@
 $ python scripts/inject_fault.py columna_ausente
 Falla 'columna_ausente' inyectada -> data/sample/migracion_con_falla.csv
+Ejecute: python -m src.run_pipeline --fuente data/sample/migracion_con_falla.csv
+codigo de salida: 0
 $ python -m src.run_pipeline --fuente data/sample/migracion_con_falla.csv
-[INFO] inicio: run_id=run-20261102T060123988358Z commit=a021409-modificado
+[INFO] inicio: run_id=run-20261103T032809928595Z commit=bef6d2e
 [ADVERTENCIA] lectura: Fuente indicada por linea de comandos: data/sample/migracion_con_falla.csv
-[INFO] lectura: Leidas 204 filas de data/sample/migracion_con_falla.csv (huella 75d2d97763db400d)
+[INFO] lectura: Leidas 204 filas de data/sample/migracion_con_falla.csv (huella 6db208e945205026)
 [INFO] validacion: ok=4 adv=0 err=2
 [ERROR] validacion: Control critico fallido: se DETIENE el pipeline sin tocar la version aprobada del tablero.
-[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=1a6c0b8dfdd34d95a603807981577c87
-[INFO] fin: run_id=run-20261102T060123988358Z estado=detenido_por_control_critico codigo=2
+[INFO] tracking: Registrado en MLflow (sqlite:///mlruns/mlflow.db) run=62d4d1a571aa4cb082cdc926338377f3
+[INFO] fin: run_id=run-20261103T032809928595Z estado=detenido_por_control_critico codigo=2
 codigo de salida: 2
 
 Reporte de calidad (results/candidate/reporte_calidad.json):
@@ -19,4 +21,4 @@ Reporte de calidad (results/candidate/reporte_calidad.json):
   regla_metodologica        ok          Toda la serie proviene de la fuente mensual
 
 Version aprobada vigente tras la falla:
-   run-20261102T060118512274Z aprobado
+   run-20261103T032806399089Z aprobado

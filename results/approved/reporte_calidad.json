@@ -48,5 +48,13 @@
     "advertencias": 0,
     "errores": 0
   },
-  "detener_pipeline": false
+  "detener_pipeline": false,
+  "perfil": {
+    "filas": 204,
+    "faltantes": 0,
+    "duplicados": 0,
+    "periodos_sin_informacion": 0,
+    "meses_cobertura_parcial": 0,
+    "ultimo_periodo": "2025-12-01"
+  }
 }
